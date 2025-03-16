@@ -1,0 +1,36 @@
+# Ignore Python bytecode
+__pycache__/
+*.py[cod]
+
+# Ignore Jupyter Notebook checkpoints
+.ipynb_checkpoints/
+
+# Ignore environment and dependency files
+venv/
+.env
+*.log
+*.sqlite3
+*.db
+
+# Ignore model files (tracked separately with Git LFS)
+models/*.pkl
+models/*.h5
+models/*.onnx
+models/*.tflite
+
+# Ignore large dataset files
+data/*.csv
+data/*.json
+data/*.xlsx
+data/*.zip
+
+# Ignore IDE files
+.vscode/
+*.swp
+.DS_Store
+
+# Ignore build artifacts
+dist/
+build/
+*.egg-info/
+node_modules/
