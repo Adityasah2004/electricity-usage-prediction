@@ -2,8 +2,8 @@ import sys
 import os
 import pandas as pd
 import numpy as np
-import matplotlib.pyplot as plt
 import pickle
+import matplotlib.pyplot as plt
 from datetime import datetime
 from sklearn.preprocessing import StandardScaler
 
@@ -11,22 +11,13 @@ from sklearn.preprocessing import StandardScaler
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')))
 
 # Import custom modules
-from src.data.preprocess import load_data, add_features, scale_data, create_sequences, train_test_split
+from src.data.preprocess import load_data, add_features, create_sequences, train_test_split
 from src.models.models import train_arima, train_sarima, train_prophet, train_lstm, evaluate_model
-from src.visualization.visualize import plot_time_series, plot_components, plot_forecast, plot_model_comparison
+from src.visualization.visualize import plot_forecast
 
 def scale_data(data, feature_columns, scaler=None):
     """
     Scales the given data using StandardScaler.
-    
-    Parameters:
-    - data: DataFrame containing the data to scale.
-    - feature_columns: List of column names to be scaled.
-    - scaler: (Optional) Pre-fitted StandardScaler instance.
-
-    Returns:
-    - scaled_df: Scaled DataFrame with the same column names and index.
-    - scaler: The StandardScaler used (newly created or existing).
     """
     if scaler is None:
         scaler = StandardScaler()
@@ -42,14 +33,6 @@ def main():
     print("Loading data...")
     df = load_data('data/raw/electricity_consumption.csv')
 
-    # Exploratory data analysis
-    print("Performing exploratory data analysis...")
-    plot_time_series(df, 'consumption', title='Electricity Consumption Over Time')
-    plt.savefig('results/time_series_plot.png')
-
-    plot_components(df, 'consumption')
-    plt.savefig('results/time_series_decomposition.png')
-
     # Feature engineering
     print("Adding features...")
     df_features = add_features(df)
@@ -59,14 +42,27 @@ def main():
     train_data, test_data = train_test_split(df_features, test_size=0.2)
 
     # Save processed data
-    train_data.to_csv('data/processed/train_data.csv')
-    test_data.to_csv('data/processed/test_data.csv')
+    train_data.to_csv('data/processed/train_data.csv', index=True)
+    test_data.to_csv('data/processed/test_data.csv', index=True)
 
-    # Train models
-    print("Training models...")
+    # Feature columns for scaling and LSTM input
+    feature_columns = ['consumption', 'hour', 'dayofweek', 'month', 
+                       'consumption_lag_1d', 'consumption_rolling_mean_24h', 'consumption_rolling_std_24h']
+
+    # Scale data
+    print("Scaling data...")
+    train_scaled, scaler = scale_data(train_data, feature_columns)
+    test_scaled, _ = scale_data(test_data, feature_columns, scaler)
+
+    # Save the scaler for predictions
+    with open('models/scaler.pkl', 'wb') as f:
+        pickle.dump(scaler, f)
+    print("Scaler saved as models/scaler.pkl")
+
+    # Initialize results dictionary
     results = {}
 
-    # 1. ARIMA Model
+    # 1️⃣ **Train ARIMA Model**
     print("Training ARIMA model...")
     arima_model = train_arima(train_data['consumption'], order=(2, 1, 2))
     arima_forecast = arima_model.forecast(steps=len(test_data))
@@ -84,7 +80,7 @@ def main():
     plot_forecast(test_data['consumption'], arima_forecast, title='ARIMA Forecast vs Actual')
     plt.savefig('results/arima_forecast.png')
 
-    # 2. SARIMA Model
+    # 2️⃣ **Train SARIMA Model**
     print("Training SARIMA model...")
     sarima_model = train_sarima(train_data['consumption'], order=(2, 1, 2), seasonal_order=(1, 1, 1, 24))
     sarima_forecast = sarima_model.forecast(steps=len(test_data))
@@ -102,7 +98,7 @@ def main():
     plot_forecast(test_data['consumption'], sarima_forecast, title='SARIMA Forecast vs Actual')
     plt.savefig('results/sarima_forecast.png')
 
-    # 3. Prophet Model
+    # 3️⃣ **Train Prophet Model**
     print("Training Prophet model...")
     prophet_model = train_prophet(train_data[['consumption']])
 
@@ -123,17 +119,9 @@ def main():
     plot_forecast(test_data['consumption'], prophet_forecast, title='Prophet Forecast vs Actual')
     plt.savefig('results/prophet_forecast.png')
 
-    # 4. LSTM Model
+    # 4️⃣ **Train LSTM Model**
     print("Training LSTM model...")
     
-    # Feature columns for LSTM
-    feature_columns = ['consumption', 'hour', 'dayofweek', 'month', 
-                       'consumption_lag_1d', 'consumption_rolling_mean_24h', 'consumption_rolling_std_24h']
-
-    # Scale data
-    train_scaled, scaler = scale_data(train_data, feature_columns)
-    test_scaled, _ = scale_data(test_data, feature_columns, scaler)
-
     # Create sequences for LSTM
     sequence_length = 24
     horizon = 24
@@ -146,6 +134,7 @@ def main():
 
     # Save LSTM model
     lstm_model.save('models/lstm_model.h5')
+    print("LSTM model saved.")
 
     # Predict with LSTM
     lstm_predictions = lstm_model.predict(X_test)
@@ -158,11 +147,7 @@ def main():
     results['LSTM'] = evaluate_model(y_test_reshaped, lstm_predictions_reshaped)
     print(f"LSTM Results: {results['LSTM']}")
 
-    # Compare models
-    plot_model_comparison(results)
-    plt.savefig('results/model_comparison.png')
-
-    # Save model results
+    # Save results dictionary
     with open('results/model_results.pkl', 'wb') as f:
         pickle.dump(results, f)
 
