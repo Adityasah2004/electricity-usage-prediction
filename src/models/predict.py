@@ -11,12 +11,6 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '../..')
 
 from src.data.preprocess import load_data, add_features, scale_data, create_sequences
 
-# Add these lines at the top of your TensorFlow scripts
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Disable TensorFlow logging
-import tensorflow as tf
-tf.get_logger().setLevel('ERROR')  # Disable TensorFlow logging
-
 def load_model(model_type):
     """Load a trained model."""
     if model_type.lower() == 'lstm':

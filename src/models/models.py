@@ -8,12 +8,6 @@ import tensorflow as tf
 from tensorflow.keras.models import Sequential
 from tensorflow.keras.layers import LSTM, Dense, Dropout
 
-# Add these lines at the top of your TensorFlow scripts
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '3'  # Disable TensorFlow logging
-import tensorflow as tf
-tf.get_logger().setLevel('ERROR')  # Disable TensorFlow logging
-
 def train_arima(train_data, order=(1, 1, 1)):
     """Train an ARIMA model."""
     model = ARIMA(train_data, order=order)
